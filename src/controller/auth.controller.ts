@@ -104,9 +104,7 @@ export const loginController = async (req: Request, res: Response) => {
 };
 
 export const meController = async (req: Request, res: Response) => {
- 
     const userId = (req as any).user.userId;
-
 
     try {
         const existingUser = await User.findById(userId)
@@ -115,7 +113,6 @@ export const meController = async (req: Request, res: Response) => {
                 success: false,
                 error: "User not found "
             })
-
         }
         else {
             return res.status(200).json({
