@@ -2,12 +2,13 @@ import type {Request, Response} from  'express'
 import { addStudentSchema, classSchema } from '../validators/class.schema.js';
 import Class from '../models/class.js';
 import mongoose from 'mongoose';
+import User from "../models/user.js";
+import { email } from 'zod';
 
 
 export const classController = async (req: Request, res:Response)=>{
 
     const parseDataSuccess = classSchema.safeParse(req.body);
-    console.log("hello from class Controller")
     if(!parseDataSuccess.success){
        return res.status(400).json({
             success: false, 
@@ -42,9 +43,7 @@ export const classController = async (req: Request, res:Response)=>{
         
     })
     
-}
-
-import User from "../models/user.js";
+};
 
 export const addStudentController = async (req: Request, res: Response) => {
   const classId = req.params.id;
@@ -53,7 +52,7 @@ export const addStudentController = async (req: Request, res: Response) => {
   if (role !== "teacher") {
     return res.status(403).json({
       success: false,
-      error: "Forbidden, teacher access required",
+      error: "Forbidden, teacher access required"
     });
   }
 
@@ -65,7 +64,7 @@ export const addStudentController = async (req: Request, res: Response) => {
     });
   }
 
-  const studentId  = parsed.data.stdentId;
+  const studentId  = parsed.data.studentId;
 
   const existingClass = await Class.findById(classId);
   if (!existingClass) {
@@ -81,6 +80,7 @@ export const addStudentController = async (req: Request, res: Response) => {
       error: "Forbidden, not class teacher",
     });
   }
+
 
   const studentUser = await User.findById(studentId);
   if (!studentUser || studentUser.role !== "student") {
@@ -120,80 +120,52 @@ existingClass.studentIds.push(studentUser._id);
   });
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// const addStudentController = async (req:Request, res:Response)=>{
-//     const classId = req.params.id;
-//     const teacherId = (req as any).user.userId
-//     const role = (req as any).user.role;
-
-//     const studentId = req.body.studentId;
-
-//     const studentUser = await Class.findById(studentId)
-//         if(studentUser.role !== "student"){
-//             return res.status(403).json({
-//             success: false, 
-//             error: "Forbidden, teacher access required"
-//         });
-//     };  
-
+export const getClassController = async (req: Request, res: Response) =>{
  
+  const classId  = req.params.id;
+
+  const {userId, role} = (req as any).user;
+
+  // check the db and populate
+  const existingClass = await Class.findById(classId).populate("studentIds","name email")
   
-
-//     const parseDataSuccess = addStudentSchema.safeParse(req.body)
-
-//     if(!parseDataSuccess.success){
-//         return res.status(400).json({
-//             success: false, 
-//             error: "Invalid request schema"
-//         });
-//     };
-//     const existingClass = await Class.findById(classId);
-//     if(!existingClass){
-//         return res.status(404).json({
-//             success: false, 
-//             error: "Class not found"
-//         })
-//     }
-     
-//     if(teacherId !== existingClass.teacherId.toString()){
-//        return res.status(403).json({
-//             success: false, 
-//             error: "not class teacher"
-//         })
-//     }
-
-//     // const studentId = req.body.studentId
+  if(!existingClass){
+    return res.status(404).json({
+      success: false, 
+      error: "Class not found"
+    })
     
-//     // if(role !== "student"){
-//     //     return res.status(404).json({
-//     //         success: false, 
-//     //         error: "Student not found"
-//     //     })
+  }
+  if(role === "teacher" && existingClass.teacherId.toString() != userId){
+    return res.status(403).json({
+      success: false, 
+      error: "Not class teacher"
+    })
 
-//     // }
-//     if(existingClass.studentIds.toString().includes(studentId)){
-//         return res.json({
-//             success: false, 
-//             error: "Student already exist"
-//         })
-        
-//     } 
-// }
+  }
+
+  if(role === "student" ){
+    const studentIdClass = existingClass.studentIds;
+    const isStudentInClass = studentIdClass.some(
+      (student:any) => student._id.toString() === userId
+
+    )
+    if(!isStudentInClass){
+      return res.status(403).json({
+        success: false, 
+        error: "Forbidden"
+      })
+    }
+
+  }return res.status(200).json({
+    success: true, 
+    data:{
+      id: existingClass._id, 
+      className: existingClass.className, 
+      teacherId: existingClass.teacherId, 
+      students: existingClass.studentIds  // populated users
+    }
+  });
+};
+
+

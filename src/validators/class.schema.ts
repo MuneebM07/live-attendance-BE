@@ -5,5 +5,5 @@ export const classSchema = z.object({
 });
 
 export const addStudentSchema = z.object({
-    stdentId: z.string().min(1)
+    studentId: z.string().min(1)
 })
