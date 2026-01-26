@@ -16,7 +16,7 @@ router.post("/login", loginController)
 router.get("/me", authMiddleware , meController)
 router.post("/class",authMiddleware, classController)
 router.post("/class/:id/add-student", authMiddleware, addStudentController)
-router.get("/students",authMiddleware,getClassController)
+router.get("/class/:id",authMiddleware,getClassController)
 
 export default router;
 
